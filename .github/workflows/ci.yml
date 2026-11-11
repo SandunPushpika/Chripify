@@ -69,7 +69,7 @@ jobs:
           node-version: 22
       - name: Dependency review
         if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
       - name: Require locked Rust graph before vulnerability audit
         run: test -f apps/desktop/src-tauri/Cargo.lock
       - run: cargo install cargo-audit --locked
