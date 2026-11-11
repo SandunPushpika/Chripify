@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Chripify — Private Screen Recorder",
+  "version": "0.3.3",
+  "description": "Record a screen, window or tab with microphone and webcam. Playback and downloads stay local.",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "activeTab", "scripting", "desktopCapture"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "action": {
+    "default_title": "Chripify recorder",
+    "default_icon": "icon.png",
+    "default_popup": "popup.html"
+  },
+  "icons": { "64": "icon.png" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "commands": {
+    "open-recorder": {
+      "suggested_key": { "default": "Alt+Shift+R" },
+      "description": "Open recorder controls"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'"
+  }
+}

@@ -1,0 +1,24 @@
+node_modules/
+dist/
+target/
+.cache/
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
+
+# Local configuration; commit sanitized examples instead.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Private recordings and local databases.
+*.mp4
+*.webm
+*.sqlite*
+
+# Generated native and extension artifacts.
+apps/desktop/src-tauri/binaries/
+apps/desktop/src-tauri/gen/
+apps/chrome-extension/chripify-extension.zip

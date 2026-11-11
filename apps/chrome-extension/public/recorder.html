@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Chripify · Private screen recorder</title>
+    <link rel="stylesheet" href="recorder.css" />
+  </head>
+  <body>
+    <aside>
+      <a class="brand" href="#studio"
+        ><span aria-hidden="true">c</span> chripify <small>LOCAL</small></a
+      >
+      <p class="nav-caption">YOUR WORKSPACE</p>
+      <nav aria-label="Workspace">
+        <button id="studio-nav" aria-current="page">◉ &nbsp; Recording studio</button
+        ><button id="library-nav">▤ &nbsp; My recordings <span id="count">0</span></button>
+      </nav>
+      <div class="privacy">
+        <strong>Your screen stays yours.</strong>
+        <p>No accounts, uploads or tracking. Everything is saved in this browser.</p>
+      </div>
+      <small class="version">Chrome extension · v0.3.3</small>
+    </aside>
+    <main>
+      <header>
+        <span>Workspace <b>/</b> <strong id="page-name">Studio</strong></span>
+        <div class="header-right">
+          <span id="state" role="status">Ready to record</span><span id="elapsed">00:00</span
+          ><button id="quick-stop" hidden>■ Stop &amp; save</button
+          ><button id="theme" aria-label="Switch color theme">◐</button>
+        </div>
+      </header>
+      <div class="content">
+        <div id="error" class="notice error" role="alert" hidden></div>
+        <div id="notice" class="notice" role="status" hidden></div>
+        <section id="studio">
+          <div class="eyebrow">LESS MEETING. MORE SHOWING.</div>
+          <h1>Your screen. Your story.</h1>
+          <p class="subtitle">Record an idea, a walkthrough, or a little clarity. Keep it yours.</p>
+          <div class="studio-grid">
+            <div class="record-card">
+              <div class="card-title">
+                <strong>Recording studio</strong><span id="format-label">LOCAL VIDEO</span>
+              </div>
+              <div id="preview-area" class="preview-area">
+                <video
+                  id="preview"
+                  muted
+                  autoplay
+                  playsinline
+                  aria-label="Live recording preview"
+                ></video>
+                <div id="placeholder">
+                  <div class="screen-art" aria-hidden="true">▣<span>●</span></div>
+                  <h2>Great ideas start here.</h2>
+                  <p>Choose a tab, a window, or your entire screen.</p>
+                  <small>Chrome will ask you what to share when you hit Record.</small>
+                </div>
+                <button
+                  id="bubble-handle"
+                  aria-label="Drag webcam position or use arrow keys"
+                  title="Drag to move camera; arrow keys also work"
+                  hidden
+                >
+                  ✥</button
+                ><span id="live-tag" hidden>● LIVE PREVIEW</span>
+              </div>
+              <div class="record-controls">
+                <span id="capture-info">Your recording stays on this device.</span>
+                <div>
+                  <button id="pause" class="secondary" disabled>Pause</button
+                  ><button id="stop" class="secondary" disabled>■ Stop &amp; save</button
+                  ><button id="record" class="primary" disabled>
+                    <span aria-hidden="true">●</span> Start recording
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="options-card">
+              <h2>Make it your own</h2>
+              <fieldset id="settings">
+                <legend class="sr-only">Recording settings</legend>
+                <label class="toggle"
+                  ><span>Microphone<small>Add your voice</small></span
+                  ><input id="microphone" type="checkbox" checked /></label
+                ><label class="control-label" for="microphone-device">Microphone device</label
+                ><select id="microphone-device">
+                  <option value="">System default</option>
+                </select>
+                <label class="toggle"
+                  ><span>Shared audio<small>When offered by Chrome’s picker</small></span
+                  ><input id="shared-audio" type="checkbox" checked
+                /></label>
+                <label class="toggle"
+                  ><span>Camera overlay<small>Included in your saved video</small></span
+                  ><input id="camera" type="checkbox" /></label
+                ><label class="control-label" for="camera-device">Camera device</label
+                ><select id="camera-device">
+                  <option value="">System default</option></select
+                ><button id="devices" class="text-button">↻ Refresh device list</button>
+                <div id="background-settings" hidden>
+                  <label class="control-label" for="background-effect"
+                    >Camera background effect</label
+                  >
+                  <select id="background-effect">
+                    <option value="original">Original background</option>
+                    <option value="native-blur">Background blur · browser support required</option>
+                    <option value="green-blur">Green-screen blur</option>
+                    <option value="green-color">Green-screen color</option>
+                    <option value="green-image">Green-screen image</option>
+                  </select>
+                  <p class="effect-help">
+                    Applied when recording starts. Blur uses on-device browser support when
+                    available. Green-screen options require a uniform backdrop; they are not AI
+                    person cutout.
+                  </p>
+                  <div id="green-settings" hidden>
+                    <label class="control-label" for="key-color">Backdrop color to remove</label
+                    ><input id="key-color" type="color" value="#00ff00" />
+                    <label class="control-label" for="key-tolerance">Color tolerance</label
+                    ><input id="key-tolerance" type="range" min="10" max="200" value="90" />
+                    <label class="control-label" for="background-color">Replacement color</label
+                    ><input id="background-color" type="color" value="#43335f" />
+                    <label class="control-label" for="background-file">Local background image</label
+                    ><input
+                      id="background-file"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      disabled
+                    /><small id="background-file-label"
+                      >Choose a local image for image replacement.</small
+                    >
+                  </div>
+                </div>
+                <div class="option-row">
+                  <label
+                    >Resolution<select id="resolution">
+                      <option value="720">720p</option>
+                      <option value="1080" selected>1080p</option>
+                      <option value="1440">1440p</option>
+                      <option value="2160">2160p / 4K</option>
+                    </select></label
+                  ><label
+                    >Frame rate<select id="fps">
+                      <option value="15">15 fps</option>
+                      <option value="30" selected>30 fps</option>
+                      <option value="60">60 fps</option>
+                    </select></label
+                  >
+                </div>
+                <label class="slider-label"
+                  >Microphone gain<input
+                    id="microphone-gain"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    value="1" /></label
+                ><label class="slider-label"
+                  >Shared audio gain<input
+                    id="shared-gain"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    value="1"
+                /></label>
+              </fieldset>
+              <div class="options-footnote">
+                Permission is requested only when you start. Keep this recorder tab open until
+                saving finishes.
+              </div>
+            </div>
+          </div>
+          <section id="camera-controls" class="camera-controls" hidden>
+            <h2>Camera overlay</h2>
+            <label
+              >Size<input
+                id="bubble-size"
+                type="range"
+                min="0.12"
+                max="0.55"
+                step="0.01"
+                value="0.2" /></label
+            ><label
+              >Shape<select id="bubble-shape">
+                <option value="circle">Circle</option>
+                <option value="rectangle">Rounded square</option>
+              </select></label
+            ><label class="inline"><input id="mirror" type="checkbox" checked />Mirror</label
+            ><label class="inline"
+              ><input id="camera-visible" type="checkbox" checked />Visible</label
+            ><button id="pip" class="secondary">Float webcam</button>
+            <p>
+              Drag the ✥ handle in the preview to reposition the recorded camera. A floating webcam
+              is a Chrome picture-in-picture window; its desktop position does not change the
+              recorded overlay.
+            </p>
+          </section>
+          <div class="privacy-line">
+            <span>◇ No cloud. No tracking. Just your ideas.</span
+            ><span id="storage-info">Checking local storage…</span>
+          </div>
+          <details class="help">
+            <summary>What can I record?</summary>
+            <p>
+              Choose a Chrome tab with “Share tab audio” for tab sound. Screen/window audio depends
+              on your operating system and Chrome. Microphone and webcam require separate consent.
+              Protected content may appear black.
+            </p>
+            <p>
+              Keep this tab open. Closing it, reloading it, removing the extension, or clearing
+              browser data can interrupt or delete local recordings. Download important videos.
+              Video composition runs in a dedicated worker. Test a short exported clip while
+              switching tabs to verify your Chrome/device setup.
+            </p>
+            <p>
+              Open the toolbar popup for quick recording and optional browser overlays. Chrome
+              internal pages and the Web Store do not allow page overlays. On shared pages, the
+              browser overlay can appear in the saved video; hide it when needed. Automatic AI
+              person cutout, cloud sharing links, and native overlays over every app are not
+              included.
+            </p>
+          </details>
+        </section>
+        <section id="library" hidden>
+          <div class="eyebrow">STORED ON YOUR DEVICE</div>
+          <h1>Your recordings</h1>
+          <p class="subtitle">Play it back, give it a name, and take it with you.</p>
+          <div class="library-tools">
+            <label class="sr-only" for="search">Search recordings</label
+            ><input id="search" type="search" placeholder="Search recordings…" /><label
+              class="sr-only"
+              for="sort"
+              >Sort recordings</label
+            ><select id="sort">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="longest">Longest first</option></select
+            ><button id="refresh-library" class="secondary">Refresh</button>
+          </div>
+          <p class="library-note">
+            These videos live in this extension’s browser storage, not your Downloads folder.
+            Download copies to keep them independently.
+          </p>
+          <div id="recording-list"></div>
+        </section>
+        <dialog id="player-dialog">
+          <div class="player-heading">
+            <h2 id="player-title">Recording</h2>
+            <button id="close-player" aria-label="Close playback">✕</button>
+          </div>
+          <video id="player" controls playsinline></video>
+          <p>
+            WebM playback and seeking support depend on the browser. Interrupted clips may be
+            incomplete.
+          </p>
+        </dialog>
+      </div>
+    </main>
+    <script type="module" src="ui.js"></script>
+  </body>
+</html>

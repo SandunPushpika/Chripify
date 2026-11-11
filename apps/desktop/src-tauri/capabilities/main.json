@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Local recorder controls in the main window only. No filesystem, shell, HTTP, or remote permissions.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-get-status",
+    "allow-list-sources",
+    "allow-start-recording",
+    "allow-stop-recording",
+    "allow-list-recordings"
+  ]
+}

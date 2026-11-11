@@ -1,0 +1,76 @@
+name: Quality checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  frontend:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm run extension:package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chripify-chrome-extension
+          path: apps/chrome-extension/chripify-extension.zip
+      - run: npm run format:check
+      - run: npm audit --audit-level=high
+      - run: npm run native:build
+      - run: npm run native:test
+  rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/desktop/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Linux Tauri build prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - name: Rust components
+        run: rustup component add rustfmt clippy
+      - name: Build frontend assets
+        working-directory: .
+        run: npm ci --ignore-scripts && npm run build
+      - name: Build macOS helper
+        if: runner.os == 'macOS'
+        working-directory: .
+        run: npm run native:build
+      - run: cargo fmt --check
+      - name: Verify committed dependency lock
+        shell: bash
+        run: test -f Cargo.lock
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
+      - run: cargo build --locked
+  security:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+      - name: Require locked Rust graph before vulnerability audit
+        run: test -f apps/desktop/src-tauri/Cargo.lock
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit --file apps/desktop/src-tauri/Cargo.lock

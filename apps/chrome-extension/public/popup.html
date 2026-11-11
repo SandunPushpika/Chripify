@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chripify recorder</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img src="icon.png" alt="" width="28" height="28" /><strong>chripify</strong
+      ><span>LOCAL</span>
+    </header>
+    <p class="subtitle">A little less meeting. A little more showing.</p>
+    <div id="popup-error" role="alert" hidden></div>
+    <div class="status">
+      <span id="popup-state">Ready to record</span><b id="popup-time">00:00</b>
+    </div>
+    <p id="popup-notice" role="status" hidden></p>
+    <fieldset id="popup-settings">
+      <legend class="sr-only">Quick recording settings</legend>
+      <label>Microphone<input id="popup-mic" type="checkbox" /></label
+      ><label>Shared audio<input id="popup-audio" type="checkbox" /></label
+      ><label>Camera overlay<input id="popup-camera" type="checkbox" /></label>
+      <div id="popup-effects" hidden>
+        <label for="popup-effect">Camera background</label
+        ><select id="popup-effect">
+          <option value="original">Original background</option>
+          <option value="native-blur">Background blur · browser support required</option>
+          <option value="green-blur">Green-screen blur</option>
+          <option value="green-color">Green-screen color</option>
+          <option value="green-image">Green-screen image · set in main app</option></select
+        ><small
+          >Green-screen effects need a uniform green backdrop. Blur uses your browser’s local
+          processing when available.</small
+        >
+      </div>
+    </fieldset>
+    <button id="popup-start" class="primary">● Start recording</button>
+    <div id="popup-controls" hidden>
+      <button id="popup-pause">Pause</button
+      ><button id="popup-stop" class="stop">■ Stop &amp; save</button>
+    </div>
+    <label class="website-access"
+      ><input id="popup-follow" type="checkbox" /><span
+        >Keep overlay on websites<small
+          >Optional website permission lets camera and controls follow tab changes and
+          navigation.</small
+        ></span
+      ></label
+    >
+    <button id="popup-app" class="app">Open main app <span>↗</span></button>
+    <p class="footnote">Screen, window or tab · Saved on your device</p>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

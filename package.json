@@ -1,0 +1,42 @@
+{
+  "name": "chripify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "workspaces": [
+    "apps/desktop"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/desktop",
+    "build": "npm run build -w apps/desktop",
+    "typecheck": "tsc --noEmit -p apps/desktop/tsconfig.json",
+    "lint": "eslint apps/desktop/src apps/chrome-extension/src",
+    "test": "vitest run",
+    "native:build": "node scripts/build-native.mjs",
+    "native:test": "node scripts/test-native.mjs",
+    "extension:build": "node scripts/build-extension.mjs",
+    "extension:typecheck": "tsc --noEmit -p apps/chrome-extension/tsconfig.json",
+    "extension:package": "node scripts/package-extension.mjs",
+    "format": "npm exec --yes --package=prettier@3.9.10 -- prettier --write .",
+    "format:check": "npm exec --yes --package=prettier@3.9.10 -- prettier --check .",
+    "check": "npm run typecheck && npm run extension:typecheck && npm run lint && npm test && npm run build && npm run extension:build"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@tailwindcss/vite": "4.3.0",
+    "@types/node": "24.13.5",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "eslint": "9.39.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "tailwindcss": "4.3.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0",
+    "vite": "8.0.13",
+    "vitest": "4.1.10"
+  }
+}
