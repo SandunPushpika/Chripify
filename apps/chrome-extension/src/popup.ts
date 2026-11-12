@@ -6,6 +6,7 @@ function get<T extends HTMLElement>(id: string): T {
   if (!element) throw new Error(`Missing popup control: ${id}`);
   return element as T;
 }
+
 const mic = get<HTMLInputElement>('popup-mic');
 const audio = get<HTMLInputElement>('popup-audio');
 const camera = get<HTMLInputElement>('popup-camera');
@@ -18,10 +19,12 @@ let current = 'idle';
 let busy = false;
 let contextNotice = '';
 let saveQueue = Promise.resolve();
+
 function failure(error: unknown): void {
   get('popup-error').textContent = message(error);
   get('popup-error').hidden = false;
 }
+
 function save(): Promise<void> {
   options = {
     ...options,
@@ -37,6 +40,7 @@ function save(): Promise<void> {
     .then(() => chrome.storage.local.set({ options: validated }));
   return saveQueue;
 }
+
 async function poll(): Promise<void> {
   try {
     const result = await chrome.runtime.sendMessage({ version: 1, type: 'get-state' });
@@ -64,6 +68,7 @@ async function poll(): Promise<void> {
     failure(error);
   }
 }
+
 for (const control of [mic, audio, camera, effect])
   control.addEventListener('change', () => {
     try {
@@ -95,24 +100,28 @@ start.onclick = () => {
       start.disabled = false;
     });
 };
+
 pause.onclick = () => {
   void chrome.runtime
     .sendMessage({ version: 1, type: 'control', action: current === 'paused' ? 'resume' : 'pause' })
     .then(poll)
     .catch(failure);
 };
+
 get<HTMLButtonElement>('popup-stop').onclick = () => {
   void chrome.runtime
     .sendMessage({ version: 1, type: 'control', action: 'stop' })
     .then(poll)
     .catch(failure);
 };
+
 get<HTMLButtonElement>('popup-app').onclick = () => {
   void chrome.runtime
     .sendMessage({ version: 1, type: 'open-app' })
     .then(() => window.close())
     .catch(failure);
 };
+
 follow.onchange = () => {
   follow.disabled = true;
   // Request immediately within the user's click; this permission is never requested silently.
@@ -129,6 +138,7 @@ follow.onchange = () => {
       follow.disabled = false;
     });
 };
+
 async function initialize(): Promise<void> {
   options = readOptions((await chrome.storage.local.get('options')).options);
   mic.checked = options.microphone;
@@ -158,6 +168,8 @@ async function initialize(): Promise<void> {
     void poll();
   }, 750);
 }
+
 start.disabled = true;
 get<HTMLFieldSetElement>('popup-settings').disabled = true;
+
 void initialize().catch(failure);
