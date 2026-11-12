@@ -3,7 +3,9 @@ import { isLiveState, overlayOrigins, readOptions } from './integration.js';
 
 function get<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
+
   if (!element) throw new Error(`Missing popup control: ${id}`);
+
   return element as T;
 }
 
@@ -38,13 +40,16 @@ function save(): Promise<void> {
   saveQueue = saveQueue
     .catch(() => undefined)
     .then(() => chrome.storage.local.set({ options: validated }));
+
   return saveQueue;
 }
 
 async function poll(): Promise<void> {
   try {
     const result = await chrome.runtime.sendMessage({ version: 1, type: 'get-state' });
+
     if (!isLiveState(result)) throw new Error('Reload the extension to connect the new popup.');
+
     current = result.phase;
     get('popup-notice').textContent = result.warning || contextNotice;
     get('popup-notice').hidden = !result.warning && !contextNotice;
@@ -80,6 +85,7 @@ for (const control of [mic, audio, camera, effect])
 
 start.onclick = () => {
   if (busy || current !== 'idle') return;
+
   busy = true;
   start.disabled = true;
   get('popup-error').hidden = true;
@@ -91,8 +97,10 @@ start.onclick = () => {
       type: 'start',
       returnTab: tab?.id,
     });
+
     if (typeof result !== 'object' || result === null || !('ok' in result) || result.ok !== true)
       throw new Error('Could not start. Check the main app for details.');
+
     window.close();
   })()
     .catch(failure)
@@ -149,22 +157,28 @@ async function initialize(): Promise<void> {
   get('popup-effects').hidden = !camera.checked;
   follow.checked = await chrome.permissions.contains({ origins: overlayOrigins });
   const previous = await chrome.storage.session.get('lastError');
+
   if (typeof previous.lastError === 'string') failure(new Error(previous.lastError));
+
   await chrome.runtime.sendMessage({ version: 1, type: 'overlay-access' });
   await poll();
+
   if (current === 'recording' || current === 'paused') {
     const tab = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+
     if (tab?.id !== undefined) {
       const result = await chrome.runtime.sendMessage({
         version: 1,
         type: 'show-overlay',
         tabId: tab.id,
       });
+
       if (typeof result === 'object' && result !== null && 'ok' in result && result.ok === false)
         contextNotice =
           'Chrome does not allow a page overlay here. Use these popup controls instead.';
     }
   }
+
   setInterval(() => {
     void poll();
   }, 750);

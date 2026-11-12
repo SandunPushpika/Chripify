@@ -56,8 +56,10 @@ describe('popup and browser overlay authority', () => {
     expect(isControl('pause')).toBe(true);
     expect(isControl('resume')).toBe(true);
     expect(isControl('stop')).toBe(true);
+
     for (const command of ['start', 'download', 'delete', 'execute', null, {}])
       expect(isControl(command)).toBe(false);
+
     expect(validEnvelope({ version: 1, type: 'get-state' })).toBe(true);
     expect(validEnvelope({ version: 2, type: 'control' })).toBe(false);
     expect(validEnvelope({ version: 1, type: 5 })).toBe(false);

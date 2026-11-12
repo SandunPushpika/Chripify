@@ -1,4 +1,5 @@
 import type { Options } from './domain.js';
+
 export interface Bubble {
   x: number;
   y: number;
@@ -7,6 +8,7 @@ export interface Bubble {
   mirror: boolean;
   visible: boolean;
 }
+
 export const defaultBubble = (): Bubble => ({
   x: 0.82,
   y: 0.73,
@@ -15,6 +17,7 @@ export const defaultBubble = (): Bubble => ({
   mirror: true,
   visible: true,
 });
+
 export interface CompositorInit {
   type: 'start';
   options: Options;
@@ -24,11 +27,13 @@ export interface CompositorInit {
   output: WritableStream<VideoFrame>;
   cameraOutput: WritableStream<VideoFrame>;
 }
+
 export type CompositorCommand =
   | CompositorInit
   | { type: 'bubble'; bubble: Bubble }
   | { type: 'preview' }
   | { type: 'stop' };
+
 export type CompositorEvent =
   | { type: 'ready'; width: number; height: number }
   | { type: 'preview'; blob: Blob }

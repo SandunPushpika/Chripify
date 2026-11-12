@@ -36,31 +36,43 @@ function shutdown(): void {
   frames.close();
   background?.close();
   background = undefined;
+
   for (const reader of readers) void reader.cancel().catch(() => undefined);
+
   if (output) void output.abort().catch(() => undefined);
+
   if (cameraOutput) void cameraOutput.abort().catch(() => undefined);
 }
+
 function failure(error: unknown): void {
   if (!active) return;
+
   scope.postMessage({
     type: 'error',
     message: error instanceof Error ? error.message : 'Background video processing failed.',
   });
   shutdown();
 }
+
 async function preview(): Promise<void> {
   if (!active || !ready || previewBusy) return;
+
   previewBusy = true;
+
   try {
     const image = effect.canvas;
     const thumb = new OffscreenCanvas(200, 200);
     const ctx = thumb.getContext('2d', { alpha: false });
+
     if (!ctx) return;
+
     const side = Math.min(image.width, image.height);
+
     if (bubble.mirror) {
       ctx.translate(200, 0);
       ctx.scale(-1, 1);
     }
+
     ctx.drawImage(
       image,
       (image.width - side) / 2,
@@ -73,6 +85,7 @@ async function preview(): Promise<void> {
       200
     );
     const blob = await thumb.convertToBlob({ type: 'image/jpeg', quality: 0.65 });
+
     if (active && blob.size <= 70_000) scope.postMessage({ type: 'preview', blob });
   } catch {
     /* A missing thumbnail must never stop the encoded recording. */
@@ -80,6 +93,7 @@ async function preview(): Promise<void> {
     previewBusy = false;
   }
 }
+
 function compose(screen: VideoFrame, camera: VideoFrame): OffscreenCanvas {
   if (!canvas || !context) {
     const scale = Math.min(
@@ -92,8 +106,10 @@ function compose(screen: VideoFrame, camera: VideoFrame): OffscreenCanvas {
       Math.max(2, Math.round((screen.displayHeight * scale) / 2) * 2)
     );
     context = canvas.getContext('2d', { alpha: false }) ?? undefined;
+
     if (!context) throw new Error('Offscreen video composition is unavailable.');
   }
+
   const ctx = context;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -102,19 +118,24 @@ function compose(screen: VideoFrame, camera: VideoFrame): OffscreenCanvas {
   const height = screen.displayHeight * fit;
   ctx.drawImage(screen, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
   const cameraImage = effect.draw(camera);
+
   if (bubble.visible) {
     const size = Math.min(canvas.width, canvas.height) * bubble.size;
     const x = bubble.x * (canvas.width - size);
     const y = bubble.y * (canvas.height - size);
     ctx.save();
     ctx.beginPath();
+
     if (bubble.circle) ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
     else ctx.roundRect(x, y, size, size, size * 0.08);
+
     ctx.clip();
+
     if (bubble.mirror) {
       ctx.translate(x * 2 + size, 0);
       ctx.scale(-1, 1);
     }
+
     const side = Math.min(cameraImage.width, cameraImage.height);
     ctx.drawImage(
       cameraImage,
@@ -129,25 +150,33 @@ function compose(screen: VideoFrame, camera: VideoFrame): OffscreenCanvas {
     );
     ctx.restore();
   }
+
   return canvas;
 }
+
 async function render(): Promise<void> {
   if (writing || !active) return;
+
   writing = true;
+
   try {
     while (active && dirty && frames.screen && frames.camera) {
       dirty = false;
       const timestamp = clock.next(frames.screen.timestamp, performance.now());
+
       if (timestamp === undefined) continue;
+
       const image = compose(frames.screen, frames.camera);
       const frame = new VideoFrame(image, { timestamp });
       const cameraFrame = new VideoFrame(effect.canvas, { timestamp });
+
       try {
         // Readiness is sent before writing so a sink waiting for MediaRecorder cannot deadlock preparation.
         if (!ready) {
           ready = true;
           scope.postMessage({ type: 'ready', width: image.width, height: image.height });
         }
+
         await Promise.all([output?.write(frame), cameraOutput?.write(cameraFrame)]);
       } finally {
         frame.close();
@@ -160,24 +189,30 @@ async function render(): Promise<void> {
     writing = false;
   }
 }
+
 async function consume(
   kind: 'screen' | 'camera',
   stream: ReadableStream<VideoFrame>
 ): Promise<void> {
   const reader = stream.getReader();
   readers.push(reader);
+
   try {
     while (active) {
       const { value, done } = await reader.read();
+
       if (done) {
         if (active)
           throw new Error(`${kind === 'screen' ? 'Screen' : 'Camera'} frames stopped arriving.`);
+
         break;
       }
+
       if (!active) {
         value.close();
         break;
       }
+
       frames.replace(kind, value);
       dirty = true;
       void render();
@@ -188,26 +223,35 @@ async function consume(
     reader.releaseLock();
   }
 }
+
 async function start(message: CompositorInit): Promise<void> {
   if (initialized) return;
+
   initialized = true;
   active = true;
   source = message;
   bubble = message.bubble;
+
   try {
     validateOptions(message.options);
+
     if (message.options.effect === 'green-image' && message.options.backgroundImage) {
       const encoded = message.options.backgroundImage.split(',')[1];
+
       if (!encoded) throw new Error('The local background image is invalid.');
+
       const raw = atob(encoded);
       const bytes = Uint8Array.from(raw, (character) => character.charCodeAt(0));
       background = await createImageBitmap(new Blob([bytes], { type: 'image/jpeg' }));
+
       if (!active) {
         background.close();
         background = undefined;
+
         return;
       }
     }
+
     effect = new CameraEffect(message.options, background);
     clock = new OutputClock(message.options.fps);
     output = message.output.getWriter();
@@ -218,8 +262,10 @@ async function start(message: CompositorInit): Promise<void> {
     failure(error);
   }
 }
+
 scope.onmessage = (event) => {
   const message = event.data;
+
   if (message.type === 'start') void start(message);
   else if (message.type === 'stop') shutdown();
   else if (message.type === 'bubble' && active) {

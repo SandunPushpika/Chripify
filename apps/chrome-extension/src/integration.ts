@@ -26,8 +26,10 @@ export function canReadOverlay(
 ): boolean {
   try {
     if (!tab.active || !tab.url) return false;
+
     const sender = new URL(senderUrl);
     const actual = new URL(tab.url);
+
     return (
       ['http:', 'https:'].includes(sender.protocol) &&
       sender.origin === actual.origin &&
@@ -73,14 +75,19 @@ export function defaultOptions(): Options {
 
 export function readOptions(value: unknown): Options {
   const defaults = defaultOptions();
+
   if (typeof value !== 'object' || value === null) return defaults;
+
   const options = { ...defaults };
   const source = value as Record<string, unknown>;
+
   for (const key of Object.keys(defaults) as Array<keyof Options>) {
     if (source[key] !== undefined) Object.assign(options, { [key]: source[key] });
   }
+
   if (source.backgroundImage !== undefined)
     options.backgroundImage = source.backgroundImage as string;
+
   if (
     ![options.camera, options.microphone, options.sharedAudio].every(
       (item) => typeof item === 'boolean'
@@ -90,13 +97,17 @@ export function readOptions(value: unknown): Options {
     )
   )
     throw new Error('Saved recording settings are invalid. Reset them in the main app.');
+
   validateOptions(options);
+
   return options;
 }
 
 export function isLiveState(value: unknown): value is LiveState {
   if (typeof value !== 'object' || value === null) return false;
+
   const v = value as Partial<LiveState>;
+
   return (
     ['idle', 'preparing', 'recording', 'paused', 'stopping'].includes(String(v.phase)) &&
     typeof v.elapsed === 'number' &&

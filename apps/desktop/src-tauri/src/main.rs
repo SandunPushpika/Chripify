@@ -10,31 +10,37 @@ fn authorize(window: &WebviewWindow) -> Result<(), AppError> {
     if window.label() != "main" { return Err(AppError::new("permission", "This window cannot control recording.")); }
     Ok(())
 }
+
 #[tauri::command]
 async fn get_status(window: WebviewWindow, state: State<'_, Controller>) -> Result<Status, AppError> {
     authorize(&window)?;
     state.call(Request::Status).await
 }
+
 #[tauri::command]
 async fn list_sources(window: WebviewWindow, state: State<'_, Controller>) -> Result<Vec<Source>, AppError> {
     authorize(&window)?;
     state.call(Request::Sources).await
 }
+
 #[tauri::command]
 async fn start_recording(window: WebviewWindow, state: State<'_, Controller>, request: StartRequest) -> Result<Status, AppError> {
     authorize(&window)?;
     state.call(|reply| Request::Start(request, reply)).await
 }
+
 #[tauri::command]
 async fn stop_recording(window: WebviewWindow, state: State<'_, Controller>) -> Result<Status, AppError> {
     authorize(&window)?;
     state.call(Request::Stop).await
 }
+
 #[tauri::command]
 async fn list_recordings(window: WebviewWindow, state: State<'_, Controller>) -> Result<Vec<storage::Recording>, AppError> {
     authorize(&window)?;
     state.call(Request::Library).await
 }
+
 fn main() {
     let result = tauri::Builder::default()
         .setup(|app| {

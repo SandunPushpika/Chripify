@@ -10,9 +10,11 @@ import { waitFor } from './lifecycle.js';
 interface Processor {
   readable: ReadableStream<VideoFrame>;
 }
+
 interface GeneratedTrack extends MediaStreamTrack {
   writable: WritableStream<VideoFrame>;
 }
+
 interface FrameApi {
   MediaStreamTrackProcessor?: new (options: {
     track: MediaStreamTrack;
@@ -38,6 +40,7 @@ export class WorkerCompositor {
 
   constructor(private readonly onFailure: (error: Error) => void) {
     const api = globalThis as typeof globalThis & FrameApi;
+
     if (
       !api.MediaStreamTrackProcessor ||
       !api.MediaStreamTrackGenerator ||
@@ -48,8 +51,10 @@ export class WorkerCompositor {
         'This Chrome configuration cannot process camera recording in the background. Update Chrome, or record with Camera overlay off.'
       );
     }
+
     const video = new api.MediaStreamTrackGenerator({ kind: 'video' });
     let camera: GeneratedTrack | undefined;
+
     try {
       camera = new api.MediaStreamTrackGenerator({ kind: 'video' });
       this.worker = new Worker(new URL('./compositor-worker.js', import.meta.url), {
@@ -58,8 +63,10 @@ export class WorkerCompositor {
     } catch (error) {
       video.stop();
       camera?.stop();
+
       throw error;
     }
+
     this.videoTrack = video;
     this.cameraTrack = camera;
     this.ready = new Promise<void>((resolve, reject) => {
@@ -70,7 +77,9 @@ export class WorkerCompositor {
     void this.ready.catch(() => undefined);
     this.worker.onmessage = (event: MessageEvent<CompositorEvent>) => {
       if (!this.active) return;
+
       const value = event.data;
+
       if (value.type === 'ready') {
         if (
           !Number.isFinite(value.width) ||
@@ -81,8 +90,10 @@ export class WorkerCompositor {
           value.height > 2160
         ) {
           this.fail(new Error('The camera compositor produced invalid video dimensions.'));
+
           return;
         }
+
         this.width = value.width;
         this.height = value.height;
         this.readyResolve();
@@ -96,12 +107,15 @@ export class WorkerCompositor {
     this.worker.onmessageerror = () =>
       this.fail(new Error('The browser could not transfer camera frames to the recording worker.'));
   }
+
   private fail(error: Error): void {
     if (!this.active || this.failed) return;
+
     this.failed = true;
     this.readyReject(error);
     this.onFailure(error);
   }
+
   async start(
     screen: MediaStreamTrack,
     camera: MediaStreamTrack,
@@ -112,6 +126,7 @@ export class WorkerCompositor {
     const api = globalThis as typeof globalThis & Required<FrameApi>;
     let screenReader: Processor | undefined;
     let cameraReader: Processor | undefined;
+
     try {
       screenReader = new api.MediaStreamTrackProcessor({ track: screen, maxBufferSize: 1 });
       cameraReader = new api.MediaStreamTrackProcessor({ track: camera, maxBufferSize: 1 });
@@ -139,26 +154,36 @@ export class WorkerCompositor {
     } catch (error) {
       if (screenReader && !screenReader.readable.locked)
         void screenReader.readable.cancel().catch(() => undefined);
+
       if (cameraReader && !cameraReader.readable.locked)
         void cameraReader.readable.cancel().catch(() => undefined);
+
       this.dispose();
+
       throw error;
     }
   }
+
   setBubble(bubble: Bubble): void {
     if (this.active) this.worker.postMessage({ type: 'bubble', bubble: { ...bubble } });
   }
+
   snapshot(): string | undefined {
     if (!this.active) return;
+
     const now = performance.now();
+
     if (this.previewAt === undefined || now - this.previewAt > 1000) {
       this.previewAt = now;
       this.worker.postMessage({ type: 'preview' });
     }
+
     return this.cachedFrame;
   }
+
   private receivePreview(blob: Blob): void {
     this.previewAt = undefined;
+
     if (
       !(blob instanceof Blob) ||
       blob.type !== 'image/jpeg' ||
@@ -166,6 +191,7 @@ export class WorkerCompositor {
       this.previewReader
     )
       return;
+
     const reader = new FileReader();
     this.previewReader = reader;
     reader.onload = () => {
@@ -177,8 +203,10 @@ export class WorkerCompositor {
     };
     reader.readAsDataURL(blob);
   }
+
   dispose(): void {
     if (!this.active) return;
+
     this.active = false;
     this.readyReject(new DOMException('Camera preparation cancelled.', 'AbortError'));
     this.previewReader?.abort();

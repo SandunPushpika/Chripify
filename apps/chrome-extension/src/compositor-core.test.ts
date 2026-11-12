@@ -7,8 +7,11 @@ describe('bounded background frame ownership', () => {
     const screen = Array.from({ length: 100 }, () => ({ close: vi.fn() }));
     const camera = { close: vi.fn() };
     frames.replace('camera', camera);
+
     for (const frame of screen) frames.replace('screen', frame);
+
     for (const frame of screen.slice(0, -1)) expect(frame.close).toHaveBeenCalledOnce();
+
     expect(screen[99]?.close).not.toHaveBeenCalled();
     expect(frames.screen).toBe(screen[99]);
     frames.close();

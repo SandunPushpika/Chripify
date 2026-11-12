@@ -8,14 +8,17 @@ class Frame {
   displayHeight: number;
   timestamp: number;
   close = vi.fn();
+
   constructor(source: { width: number; height: number }, init: { timestamp: number }) {
     this.displayWidth = source.width;
     this.displayHeight = source.height;
     this.timestamp = init.timestamp;
   }
 }
+
 class Canvas {
   constructor(public width: number, public height: number) {}
+
   getContext() {
     return {
       filter: 'none',
@@ -32,14 +35,17 @@ class Canvas {
       scale: vi.fn(),
     };
   }
+
   convertToBlob() {
     return Promise.resolve(new Blob(['jpeg'], { type: 'image/jpeg' }));
   }
 }
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
+
 async function fixture(blockWrite = false) {
   vi.resetModules();
   let wall = 0;
@@ -58,7 +64,9 @@ async function fixture(blockWrite = false) {
   let camera!: ReadableStreamDefaultController<VideoFrame>;
   const written: Frame[] = [];
   const cameraWritten: Frame[] = [];
+
   let release: () => void = () => undefined;
+
   const blocked = new Promise<void>((resolve) => {
     release = resolve;
   });
@@ -79,6 +87,7 @@ async function fixture(blockWrite = false) {
     output: new WritableStream({
       write(frame) {
         written.push(frame as unknown as Frame);
+
         if (blockWrite && written.length === 1) return blocked;
       },
     }),
@@ -88,10 +97,14 @@ async function fixture(blockWrite = false) {
       },
     }),
   };
+
   const send = (message: CompositorCommand) =>
     scope.onmessage({ data: message } as MessageEvent<CompositorCommand>);
+
   send(source);
+
   const frame = (timestamp: number) => new Frame({ width: 1280, height: 720 }, { timestamp });
+
   return {
     screen,
     camera,
@@ -106,6 +119,7 @@ async function fixture(blockWrite = false) {
     },
   };
 }
+
 describe('dedicated worker compositor with simulated native frames', () => {
   it('keeps recording new frames with no document or video presentation callbacks', async () => {
     const f = await fixture();
@@ -124,6 +138,7 @@ describe('dedicated worker compositor with simulated native frames', () => {
     await vi.waitFor(() => expect(f.written).toHaveLength(3));
     f.send({ type: 'stop' });
     expect(screen.close).toHaveBeenCalledOnce();
+
     for (const output of f.written) expect(output.close).toHaveBeenCalledOnce();
   });
   it('signals readiness before sink acknowledgment and drops stale input under backpressure', async () => {
@@ -134,7 +149,9 @@ describe('dedicated worker compositor with simulated native frames', () => {
     expect(f.post).toHaveBeenCalledWith({ type: 'ready', width: 1280, height: 720 });
     const replacements = Array.from({ length: 20 }, (_value, i) => f.frame(2000 + i));
     f.time(100);
+
     for (const frame of replacements) f.screen.enqueue(frame as unknown as VideoFrame);
+
     await vi.waitFor(() => expect(replacements[18]?.close).toHaveBeenCalledOnce());
     expect(f.written).toHaveLength(1);
     expect(replacements[19]?.close).not.toHaveBeenCalled();

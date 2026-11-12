@@ -14,7 +14,9 @@ describe('bounded/cancellable recording startup', () => {
   });
   it('times out a stalled browser operation and observes its late rejection', async () => {
     vi.useFakeTimers();
+
     let fail: (error: Error) => void = () => undefined;
+
     const waiting = waitFor(
       new Promise((_resolve, reject) => {
         fail = reject;
@@ -41,7 +43,9 @@ describe('bounded/cancellable recording startup', () => {
     vi.useFakeTimers();
     const controller = new AbortController();
     const stop = vi.fn();
+
     let deliver: (stream: MediaStream) => void = () => undefined;
+
     const waiting = acquire(
       new Promise((resolve) => {
         deliver = resolve;

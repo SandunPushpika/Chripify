@@ -6,10 +6,12 @@ if (process.platform !== 'darwin') {
   console.log('Native argument validation requires macOS.');
   process.exit(0);
 }
+
 const executable = resolve(
   import.meta.dirname,
   '../apps/desktop/src-tauri/binaries/chripify-capture'
 );
+
 // These inputs fail before any OS permission request or capture initialization.
 for (const args of [
   [],
@@ -24,4 +26,5 @@ for (const args of [
   assert.equal(event.code, 'capture_unavailable');
   assert.equal(result.stderr, '');
 }
+
 console.log('Native helper: 4 invalid-input cases passed without requesting capture.');

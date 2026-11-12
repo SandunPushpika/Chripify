@@ -5,9 +5,11 @@ import './styles.css';
 
 class ErrorBoundary extends React.Component<React.PropsWithChildren, { failed: boolean }> {
   state = { failed: false };
+
   static getDerivedStateFromError() {
     return { failed: true };
   }
+
   render() {
     return this.state.failed ? (
       <main className="fatal" role="alert">
@@ -19,7 +21,9 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, { failed: b
     );
   }
 }
+
 const root = document.getElementById('root');
+
 if (root)
   createRoot(root).render(
     <React.StrictMode>

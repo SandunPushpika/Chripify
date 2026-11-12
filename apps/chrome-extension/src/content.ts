@@ -1,7 +1,9 @@
 // Classic isolated-world content script. No page scripts, DOM data, camera devices or network APIs are used.
 (() => {
   const global = globalThis as typeof globalThis & { __chripifyOverlay?: boolean };
+
   if (global.__chripifyOverlay) return;
+
   global.__chripifyOverlay = true;
   const host = document.createElement('div');
   const shadow = host.attachShadow({ mode: 'closed' });
@@ -56,27 +58,35 @@
   let polling = false;
   let generation = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
+
   function hide(): void {
     host.remove();
     image.removeAttribute('src');
   }
+
   async function refresh(): Promise<void> {
     if (polling) return;
+
     clearTimeout(timer);
     polling = true;
     const epoch = generation;
+
     try {
       const value = await chrome.runtime.sendMessage({
         version: 1,
         type: 'get-state',
         frame: !dismissed && !cameraHidden && !document.hidden,
       });
+
       if (epoch !== generation) return;
+
       if (typeof value !== 'object' || value === null || !('phase' in value)) {
         phase = 'idle';
         hide();
+
         return;
       }
+
       const state = value as {
         phase: string;
         elapsed?: number;
@@ -93,16 +103,22 @@
       countdown.hidden = !remaining;
       countdown.textContent = remaining ?? '';
       countdown.setAttribute('aria-label', remaining ? `Recording starts in ${remaining}` : '');
+
       if (!['recording', 'paused', 'preparing'].includes(phase)) {
         dismissed = false;
         hide();
+
         return;
       }
+
       if (dismissed || document.hidden) {
         hide();
+
         return;
       }
+
       if (!host.isConnected) document.documentElement.append(host);
+
       const seconds = Math.max(0, Math.floor((state.elapsed ?? 0) / 1000));
       time.textContent = `${Math.floor(seconds / 60)
         .toString()
@@ -120,6 +136,7 @@
           ? state.warning.slice(0, 400)
           : 'Browser overlay may appear in shared video. Hide it with ✕ when needed.';
       image.hidden = !state.camera || cameraHidden;
+
       if (image.hidden) image.removeAttribute('src');
       else if (
         typeof state.frame === 'string' &&
@@ -132,12 +149,14 @@
       hide();
     } finally {
       polling = false;
+
       if (['recording', 'paused', 'preparing'].includes(phase) && !dismissed && !document.hidden)
         timer = setTimeout(() => {
           void refresh();
         }, 200);
     }
   }
+
   pause.onclick = (event) => {
     if (event.isTrusted)
       void chrome.runtime
@@ -174,6 +193,7 @@
   };
   let offsetX = 0;
   let offsetY = 0;
+
   function move(x: number, y: number): void {
     const rectangle = host.getBoundingClientRect();
     host.style.setProperty(
@@ -187,6 +207,7 @@
     host.style.setProperty('--chripify-right', 'auto');
     host.style.setProperty('--chripify-bottom', 'auto');
   }
+
   drag.onpointerdown = (event) => {
     const r = host.getBoundingClientRect();
     offsetX = event.clientX - r.left;
@@ -199,6 +220,7 @@
   };
   drag.onkeydown = (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+
     event.preventDefault();
     const r = host.getBoundingClientRect();
     const step = event.shiftKey ? 30 : 10;
@@ -215,35 +237,46 @@
       !('type' in value)
     )
       return;
+
     if (value.type === 'overlay-disabled') {
       generation++;
       phase = 'idle';
       clearTimeout(timer);
       hide();
+
       return;
     }
+
     if (value.type === 'overlay-show') {
       dismissed = false;
       generation++;
       clearTimeout(timer);
+
       if ('phase' in value && typeof value.phase === 'string') phase = value.phase;
+
       void refresh();
+
       return;
     }
+
     if (value.type !== 'overlay-status') return;
+
     generation++;
     clearTimeout(timer);
+
     if ('phase' in value && (value.phase === 'idle' || value.phase === 'stopping')) {
       phase = 'idle';
       dismissed = false;
       hide();
     } else {
       if ('phase' in value && typeof value.phase === 'string') phase = value.phase;
+
       void refresh();
     }
   });
   document.addEventListener('visibilitychange', () => {
     clearTimeout(timer);
+
     if (document.hidden) hide();
     else void refresh();
   });

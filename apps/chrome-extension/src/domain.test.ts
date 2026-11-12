@@ -24,14 +24,17 @@ const options: Options = {
 describe('extension trust boundaries and lifecycle', () => {
   it('accepts recording, pause, resume and finalization in order', () => {
     let phase = transition('idle', 'preparing');
+
     for (const next of ['recording', 'paused', 'recording', 'stopping', 'idle'] as const)
       phase = transition(phase, next);
+
     expect(phase).toBe('idle');
     expect(() => transition('recording', 'preparing')).toThrow();
     expect(() => transition('paused', 'idle')).toThrow();
   });
   it('rejects unsupported encoder settings and non-finite gain', () => {
     expect(() => validateOptions(options)).not.toThrow();
+
     for (const invalid of [
       { fps: 240 },
       { maxHeight: 20000 },
@@ -42,6 +45,7 @@ describe('extension trust boundaries and lifecycle', () => {
   });
   it('validates titles while treating markup as plain text', () => {
     expect(validateTitle('  Demo <script>  ')).toBe('Demo <script>');
+
     for (const title of ['', '\u0000name', 'x'.repeat(121)])
       expect(() => validateTitle(title)).toThrow();
   });
@@ -51,6 +55,7 @@ describe('extension trust boundaries and lifecycle', () => {
   });
   it('rejects unauthorized message schemas and future protocol versions', () => {
     expect(validBadge({ version: 1, type: 'status', phase: 'recording' })).toBe(true);
+
     for (const value of [
       null,
       {},

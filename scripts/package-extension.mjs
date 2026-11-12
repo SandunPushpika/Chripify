@@ -1,10 +1,13 @@
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
+
 const root = resolve(import.meta.dirname, '..');
 const build = spawnSync(process.execPath, [resolve(root, 'scripts/build-extension.mjs')], {
   stdio: 'inherit',
 });
+
 if (build.status !== 0) process.exit(build.status ?? 1);
+
 const code = `
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED

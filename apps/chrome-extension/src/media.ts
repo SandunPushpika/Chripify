@@ -13,24 +13,31 @@ export async function acquire(
 ): Promise<MediaStream> {
   return new Promise((resolve, reject) => {
     let settled = false;
+
     const cleanup = () => {
       clearTimeout(timeout);
       signal?.removeEventListener('abort', cancelled);
     };
+
     const fail = (error: unknown) => {
       if (settled) return;
+
       settled = true;
       cleanup();
       reject(error);
     };
+
     const cancelled = () =>
       fail(signal ? abortReason(signal) : new DOMException('Cancelled.', 'AbortError'));
+
     promise.then(
       (stream) => {
         if (settled) {
           stream.getTracks().forEach((track) => track.stop());
+
           return;
         }
+
         settled = true;
         cleanup();
         resolve(stream);
@@ -41,10 +48,13 @@ export async function acquire(
       () => fail(new Error('Device selection timed out. Close the sharing dialog and try again.')),
       timeoutMs
     );
+
     if (signal?.aborted) {
       cancelled();
+
       return;
     }
+
     signal?.addEventListener('abort', cancelled, { once: true });
   });
 }
@@ -58,22 +68,29 @@ export class Capture {
   private compositor: WorkerCompositor | undefined;
   cameraVideo: HTMLVideoElement | undefined;
   output: MediaStream | undefined;
+
   get width(): number {
     return this.compositor?.width ?? 0;
   }
+
   get height(): number {
     return this.compositor?.height ?? 0;
   }
+
   cameraSnapshot(): string | undefined {
     return this.active && this.bubble.visible ? this.compositor?.snapshot() : undefined;
   }
+
   updateBubble(): void {
     this.compositor?.setBubble(this.bubble);
   }
+
   own(stream: MediaStream): MediaStream {
     this.streams.push(stream);
+
     return stream;
   }
+
   audio(context: AudioContext): void {
     this.context = context;
   }
@@ -91,8 +108,10 @@ export class Capture {
       ...(options.sharedAudio ? display.getAudioTracks() : []),
       ...(options.microphone ? devices?.getAudioTracks() ?? [] : []),
     ];
+
     if (audioTracks.length && this.context) {
       const destination = this.context.createMediaStreamDestination();
+
       for (const track of audioTracks) {
         const gain = this.context.createGain();
         gain.gain.value = display.getAudioTracks().includes(track)
@@ -104,12 +123,16 @@ export class Capture {
           .connect(destination);
         this.gains.push(gain);
       }
+
       tracks.push(...destination.stream.getAudioTracks());
       this.own(destination.stream);
     }
+
     const camera = devices?.getVideoTracks()[0];
     const screen = display.getVideoTracks()[0];
+
     if (!screen) throw new Error('The selected screen has no video track.');
+
     if (camera) {
       await waitFor(
         configureNativeBlur(camera, options, warn),
@@ -117,12 +140,16 @@ export class Capture {
         'Camera effects could not initialize.',
         signal
       );
+
       if (signal?.aborted) throw abortReason(signal);
+
       const compositor = new WorkerCompositor(onFailure);
       this.compositor = compositor;
       await compositor.start(screen, camera, options, this.bubble, signal);
+
       if (!this.active || signal?.aborted)
         throw signal ? abortReason(signal) : new Error('Capture was cancelled.');
+
       tracks.push(compositor.videoTrack);
       // PiP/HTML preview is only a consumer. It never gates or drives recording frames.
       const video = document.createElement('video');
@@ -132,22 +159,32 @@ export class Capture {
       this.cameraVideo = video;
       void video.play().catch(() => undefined);
     } else tracks.push(screen);
+
     this.output = new MediaStream(tracks);
+
     return this.output;
   }
+
   dispose(): void {
     if (!this.active) return;
+
     this.active = false;
     this.compositor?.dispose();
     this.compositor = undefined;
+
     for (const stream of this.streams) stream.getTracks().forEach((track) => track.stop());
+
     if (this.cameraVideo) {
       this.cameraVideo.pause();
       this.cameraVideo.srcObject = null;
     }
+
     for (const gain of this.gains) gain.disconnect();
+
     this.gains = [];
+
     if (this.context) void this.context.close().catch(() => undefined);
+
     this.output?.getTracks().forEach((track) => track.stop());
   }
 }

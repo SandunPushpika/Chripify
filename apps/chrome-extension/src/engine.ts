@@ -16,19 +16,23 @@ export class SessionClock {
   private started = 0;
   private accumulated = 0;
   private running = false;
+
   constructor(private readonly now: () => number = () => performance.now()) {}
+
   resume(): void {
     if (!this.running) {
       this.started = this.now();
       this.running = true;
     }
   }
+
   pause(): void {
     if (this.running) {
       this.accumulated += this.now() - this.started;
       this.running = false;
     }
   }
+
   elapsed(): number {
     return this.accumulated + (this.running ? this.now() - this.started : 0);
   }
@@ -40,25 +44,31 @@ export class ChunkWriter {
   private index = 0;
   private failed = false;
   error: unknown;
+
   constructor(
     private readonly append: (index: number, blob: Blob) => Promise<void>,
     private readonly fail: (error: unknown) => void
   ) {}
+
   write(blob: Blob): void {
     if (!blob.size || this.failed) return;
+
     if (this.pending + blob.size > MAX_PENDING_BYTES) {
       this.error = new Error(
         'Local storage cannot keep up with recording. Reduce quality or free disk space.'
       );
       this.failed = true;
       this.fail(this.error);
+
       return;
     }
+
     this.pending += blob.size;
     const index = this.index++;
     this.tail = this.tail
       .then(async () => {
         if (this.failed) return;
+
         await this.append(index, blob);
       })
       .catch((error) => {
@@ -72,8 +82,10 @@ export class ChunkWriter {
         this.pending -= blob.size;
       });
   }
+
   async finish(): Promise<void> {
     await this.tail;
+
     if (this.failed) throw this.error;
   }
 }
@@ -85,6 +97,7 @@ interface Events {
   saved(recording: Recording): void;
   failed(error: unknown): void;
 }
+
 export class RecorderEngine {
   phase: Phase = 'idle';
   capture: Capture | undefined;
@@ -96,27 +109,35 @@ export class RecorderEngine {
   private finishFallback: (() => void) | undefined;
   private preparation: AbortController | undefined;
   private stage = '';
+
   get preparationStage(): string {
     return this.stage;
   }
+
   cancelPreparation(): void {
     this.preparation?.abort(new DOMException('Recording preparation cancelled.', 'AbortError'));
   }
+
   constructor(private readonly library: Library, private readonly events: Events) {}
+
   get elapsed(): number {
     return this.clock.elapsed();
   }
+
   private set(next: Phase): void {
     this.phase = transition(this.phase, next);
     this.events.changed(next);
   }
+
   async start(
     options: Options,
     displaySource?: () => Promise<MediaStream>,
     beforeRecord?: () => Promise<void>
   ): Promise<void> {
     validateOptions(options);
+
     if (this.phase !== 'idle') throw new Error('A recording session is already active.');
+
     const mimeType = chooseMime((mime) => MediaRecorder.isTypeSupported(mime));
     this.clock = new SessionClock();
     this.set('preparing');
@@ -125,7 +146,9 @@ export class RecorderEngine {
     const preparation = new AbortController();
     this.preparation = preparation;
     const signal = preparation.signal;
+
     const cancelled = () => capture.dispose();
+
     signal.addEventListener('abort', cancelled, { once: true });
     const startupTimer = setTimeout(
       () =>
@@ -137,15 +160,18 @@ export class RecorderEngine {
     this.stopRequested = false;
     let record: Recording | undefined;
     let captureFailure: Error | undefined;
+
     try {
       // Invoke directly in the click handler, before awaiting storage/device work: Chrome requires user activation.
       let audioContext: AudioContext | undefined;
+
       if (options.microphone || options.sharedAudio) {
         const context = new AudioContext();
         audioContext = context;
         capture.audio(context);
         void context.resume().catch(() => undefined);
       }
+
       this.stage = 'Waiting for screen sharing';
       const displayRequest = acquire(
         displaySource
@@ -164,12 +190,15 @@ export class RecorderEngine {
       );
       const display = capture.own(await displayRequest);
       const displayTrack = display.getVideoTracks()[0];
+
       if (!displayTrack) throw new Error('Chrome did not provide a screen video track.');
+
       let sharingEnded = false;
       displayTrack.addEventListener(
         'ended',
         () => {
           sharingEnded = true;
+
           if (this.capture === capture && (this.phase === 'recording' || this.phase === 'paused'))
             void this.stop();
         },
@@ -192,6 +221,7 @@ export class RecorderEngine {
         'Browser storage did not respond. Retry or free space.',
         signal
       );
+
       if (
         estimate.quota !== undefined &&
         estimate.usage !== undefined &&
@@ -201,7 +231,9 @@ export class RecorderEngine {
           'At least 128 MiB of local browser storage is required. Download recordings and free space.'
         );
       }
+
       let devices: MediaStream | undefined;
+
       if (options.camera || options.microphone) {
         this.stage = 'Allow camera/microphone in the recorder tab';
         devices = capture.own(
@@ -228,8 +260,10 @@ export class RecorderEngine {
           )
         );
       }
+
       if (sharingEnded || displayTrack.readyState !== 'live')
         throw new Error('Screen sharing ended before recording could start.');
+
       if (audioContext && (display.getAudioTracks().length || devices?.getAudioTracks().length)) {
         this.stage = 'Starting audio processing';
         const context = audioContext;
@@ -240,10 +274,12 @@ export class RecorderEngine {
           signal
         );
       }
+
       if (options.sharedAudio && !display.getAudioTracks().length)
         this.events.warning(
           'Chrome did not provide shared audio. For tab audio, choose a Chrome tab and enable “Share tab audio” in the picker.'
         );
+
       this.stage = options.camera
         ? 'Starting background camera/video processing'
         : 'Starting screen recording';
@@ -255,6 +291,7 @@ export class RecorderEngine {
         signal,
         (error) => {
           captureFailure = error;
+
           if (this.phase === 'preparing') preparation.abort(error);
           else if (this.phase === 'recording' || this.phase === 'paused') {
             this.events.warning(error.message);
@@ -282,6 +319,7 @@ export class RecorderEngine {
         'The local recording could not be created in time.',
         signal
       );
+
       if (beforeRecord) {
         this.stage = 'Returning to the shared browser';
         await waitFor(
@@ -291,11 +329,15 @@ export class RecorderEngine {
           signal
         );
       }
+
       await recordingCountdown(signal, (remaining) => {
         this.stage = `Recording starts in ${remaining}…`;
       });
+
       if (signal.aborted) throw abortReason(signal);
+
       if (captureFailure) throw captureFailure;
+
       if (
         sharingEnded ||
         displayTrack.readyState !== 'live' ||
@@ -303,6 +345,7 @@ export class RecorderEngine {
       ) {
         throw new Error('Sharing or a selected device ended before recording could start.');
       }
+
       const recording = record;
       let failure: unknown;
       const writer = new ChunkWriter(
@@ -329,23 +372,31 @@ export class RecorderEngine {
         };
         recorder.onstop = () => {
           if (finalized) return;
+
           finalized = true;
           clearTimeout(this.watchdog);
           recorder.ondataavailable = null;
+
           if (this.phase === 'recording' || this.phase === 'paused') {
             this.clock.pause();
             this.set('stopping');
           }
+
           capture.dispose();
           this.events.preview(undefined);
           void (async () => {
             try {
               await writer.finish();
+
               if (captureFailure) throw captureFailure;
+
               if (failure) throw failure;
+
               const stored = (await this.library.list()).find((item) => item.id === recording.id);
+
               if (!stored?.bytes)
                 throw new Error('Chrome produced an empty recording. No complete video was saved.');
+
               await this.library.update(recording.id, {
                 state: 'complete',
                 durationMs: this.clock.elapsed(),
@@ -372,16 +423,19 @@ export class RecorderEngine {
           recorder.onstop?.(new Event('stop'));
         };
       });
+
       for (const track of devices?.getTracks() ?? [])
         track.addEventListener(
           'ended',
           () => {
             if (this.capture !== capture) return;
+
             this.events.warning('A camera or microphone disconnected. Recording has been stopped.');
             void this.stop();
           },
           { once: true }
         );
+
       recorder.start(1000);
       this.clock.resume();
       this.set('recording');
@@ -391,49 +445,67 @@ export class RecorderEngine {
       capture.dispose();
       this.capture = undefined;
       this.recorder = undefined;
+
       if (record)
         void this.library.update(record.id, { state: 'interrupted' }).catch(() => undefined);
+
       this.set('idle');
+
       throw error;
     } finally {
       clearTimeout(startupTimer);
       signal.removeEventListener('abort', cancelled);
+
       if (this.preparation === preparation) this.preparation = undefined;
+
       this.stage = '';
     }
   }
+
   pause(): void {
     if (this.phase !== 'recording' || !this.recorder) return;
+
     this.recorder.pause();
     this.clock.pause();
     this.set('paused');
   }
+
   resume(): void {
     if (this.phase !== 'paused' || !this.recorder) return;
+
     this.recorder.resume();
     this.clock.resume();
     this.set('recording');
   }
+
   async stop(): Promise<void> {
     if (this.phase === 'preparing') {
       this.cancelPreparation();
+
       return;
     }
+
     if (this.phase === 'stopping') return this.completion;
+
     if (
       !this.recorder ||
       this.stopRequested ||
       (this.phase !== 'recording' && this.phase !== 'paused')
     )
       return;
+
     this.stopRequested = true;
     this.clock.pause();
     this.set('stopping');
+
     if (this.recorder.state !== 'inactive') this.recorder.stop();
+
     this.capture?.dispose();
     this.watchdog = setTimeout(() => this.finishFallback?.(), 20_000);
+
     return this.completion;
   }
+
   dispose(): void {
     this.cancelPreparation();
     this.capture?.dispose();

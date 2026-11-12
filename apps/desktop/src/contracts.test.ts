@@ -8,6 +8,7 @@ describe('recording presentation rules', () => {
   it('never enables a second session while one is active', () => {
     for (const phase of ['preparing', 'recording', 'paused', 'finalizing'] as const)
       expect(canStart(phase)).toBe(false);
+
     for (const phase of ['idle', 'completed', 'failed', 'cancelled'] as const)
       expect(canStart(phase)).toBe(true);
   });

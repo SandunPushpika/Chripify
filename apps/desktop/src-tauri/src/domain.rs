@@ -36,6 +36,7 @@ impl AppError {
     pub fn new(code: &str, message: &str) -> Self {
         Self { code: code.into(), message: message.into() }
     }
+
     pub fn storage() -> Self { Self::new("storage", "Local storage is unavailable. Check disk space and folder permissions.") }
     pub fn platform() -> Self { Self::new("platform", "Capture is unavailable. Check macOS Screen Recording permission and restart the app.") }
 }
@@ -63,6 +64,7 @@ pub struct Status {
     pub started_at: Option<u64>,
     pub error: Option<AppError>,
 }
+
 impl Status {
     pub fn advance(&mut self, next: Phase) -> Result<(), AppError> {
         self.phase = self.phase.transition(next)?;
@@ -83,6 +85,7 @@ mod tests {
         assert!(Phase::Preparing.transition(Phase::Completed).is_err());
         assert!(Phase::Idle.transition(Phase::Finalizing).is_err());
     }
+
     #[test]
     fn validates_boundary() {
         let sources = [Source { id: 1, width: 1920, height: 1080 }];

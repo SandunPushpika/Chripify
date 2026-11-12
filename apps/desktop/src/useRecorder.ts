@@ -10,6 +10,7 @@ import {
 } from './contracts';
 
 const initial: Status = { phase: 'idle', startedAt: null, error: null };
+
 export function useRecorder() {
   const [status, setStatus] = useState(initial);
   const [sources, setSources] = useState<Source[]>([]);
@@ -18,21 +19,27 @@ export function useRecorder() {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!isDesktop()) return;
+
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+
     const poll = async () => {
       try {
         const next = await invoke('get_status');
+
         if (!cancelled) setStatus(next);
       } catch (e) {
         if (!cancelled) setError(errorMessage(e));
       }
+
       if (!cancelled)
         timer = setTimeout(() => {
           void poll();
         }, 750);
     };
+
     void poll();
+
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -40,6 +47,7 @@ export function useRecorder() {
   }, []);
   useEffect(() => {
     if (!isDesktop()) return;
+
     let cancelled = false;
     void invoke('list_recordings').then(
       (result) => {
@@ -49,14 +57,18 @@ export function useRecorder() {
         if (!cancelled) setError(errorMessage(reason));
       }
     );
+
     return () => {
       cancelled = true;
     };
   }, [status.phase]);
+
   const action = async (operation: () => Promise<void>) => {
     if (busy) return;
+
     setBusy(true);
     setError(null);
+
     try {
       await operation();
     } catch (e) {
@@ -65,6 +77,7 @@ export function useRecorder() {
       setBusy(false);
     }
   };
+
   return {
     status,
     sources,
@@ -78,6 +91,7 @@ export function useRecorder() {
     start: (displayId: number, fps: number) =>
       action(async () => {
         if (!canStart(status.phase)) return;
+
         setStatus(await invoke('start_recording', { request: { displayId, fps } }));
       }),
     stop: () =>

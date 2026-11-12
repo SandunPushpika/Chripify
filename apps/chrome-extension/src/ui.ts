@@ -7,12 +7,18 @@ import { isControl, readOptions, validEnvelope } from './integration.js';
 
 function element<T extends HTMLElement>(id: string): T {
   const value = document.getElementById(id);
+
   if (!value) throw new Error(`Missing application element: ${id}`);
+
   return value as T;
 }
+
 const input = (id: string) => element<HTMLInputElement>(id);
+
 const select = (id: string) => element<HTMLSelectElement>(id);
+
 const button = (id: string) => element<HTMLButtonElement>(id);
+
 const preview = element<HTMLVideoElement>('preview');
 const player = element<HTMLVideoElement>('player');
 const dialog = element<HTMLDialogElement>('player-dialog');
@@ -33,17 +39,22 @@ function notice(text: string): void {
   element('notice').textContent = text;
   element('notice').hidden = !text;
 }
+
 function failure(error: unknown): void {
   element('error').textContent = message(error);
   element('error').hidden = false;
 }
+
 function clearError(): void {
   element('error').hidden = true;
 }
+
 async function action(work: () => Promise<void>): Promise<void> {
   if (operation) return;
+
   operation = true;
   clearError();
+
   try {
     await work();
   } catch (error) {
@@ -52,6 +63,7 @@ async function action(work: () => Promise<void>): Promise<void> {
     operation = false;
   }
 }
+
 function page(name: 'studio' | 'library'): void {
   element('studio').hidden = name !== 'studio';
   element('library').hidden = name !== 'library';
@@ -59,6 +71,7 @@ function page(name: 'studio' | 'library'): void {
   button('studio-nav').setAttribute('aria-current', name === 'studio' ? 'page' : 'false');
   button('library-nav').setAttribute('aria-current', name === 'library' ? 'page' : 'false');
 }
+
 function options(): Options {
   return {
     microphone: input('microphone').checked,
@@ -77,19 +90,24 @@ function options(): Options {
     backgroundImage,
   };
 }
+
 function effectControls(): void {
   element('background-settings').hidden = !input('camera').checked;
   const effect = select('background-effect').value;
   element('green-settings').hidden = !effect.startsWith('green-');
   input('background-file').disabled = effect !== 'green-image';
 }
+
 function selectDevicePreference(id: string, value: string): void {
   const menu = select(id);
+
   if (value && !Array.from(menu.options).some((option) => option.value === value)) {
     menu.add(new Option('Saved device (checked when recording starts)', value));
   }
+
   menu.value = value;
 }
+
 function applyOptions(value: Options): void {
   input('microphone').checked = value.microphone;
   input('shared-audio').checked = value.sharedAudio;
@@ -110,17 +128,22 @@ function applyOptions(value: Options): void {
     : 'Choose a local image for image replacement.';
   effectControls();
 }
+
 function saveOptions(): Promise<void> {
   effectControls();
   const value = options();
+
   if (value.camera && value.effect === 'green-image' && !value.backgroundImage)
     return Promise.resolve();
+
   // Permit selecting image mode before selecting its file, but do not start until it is supplied.
   settingsSave = settingsSave
     .catch(() => undefined)
     .then(() => chrome.storage.local.set({ options: value }));
+
   return settingsSave;
 }
+
 function state(phase: Phase): void {
   const idle = phase === 'idle';
   const labels: Record<Phase, string> = {
@@ -145,15 +168,20 @@ function state(phase: Phase): void {
   element('bubble-handle').hidden =
     element('camera-controls').hidden || !input('camera-visible').checked;
   element('live-tag').hidden = idle || phase === 'preparing' || phase === 'stopping';
+
   if (typeof chrome !== 'undefined' && chrome.runtime?.id) {
     void chrome.runtime.sendMessage({ version: 1, type: 'status', phase }).catch(() => undefined);
   }
+
   if (idle) void refreshLibrary().catch(failure);
 }
+
 async function devices(): Promise<void> {
   // Enumerate only: do not open camera/microphone just to display their names.
   const devices = await enumerateVisibleDevices(navigator.mediaDevices, document.visibilityState);
+
   if (!devices) return;
+
   for (const [id, kind] of [
     ['microphone-device', 'audioinput'],
     ['camera-device', 'videoinput'],
@@ -174,6 +202,7 @@ async function devices(): Promise<void> {
     selectDevicePreference(id, previous);
   }
 }
+
 function makeButton(
   text: string,
   callback: () => Promise<void>,
@@ -181,22 +210,28 @@ function makeButton(
 ): HTMLButtonElement {
   const result = document.createElement('button');
   result.textContent = text;
+
   if (danger) result.className = 'danger';
+
   result.addEventListener('click', () => {
     result.disabled = true;
     void action(callback).finally(() => {
       result.disabled = false;
     });
   });
+
   return result;
 }
+
 async function openPlayer(record: Recording): Promise<void> {
   if (playerUrl) URL.revokeObjectURL(playerUrl);
+
   playerUrl = URL.createObjectURL(await library.blob(record));
   player.src = playerUrl;
   element('player-title').textContent = record.title;
   dialog.showModal();
 }
+
 async function download(record: Recording): Promise<void> {
   const blob = await library.blob(record);
   const url = URL.createObjectURL(blob);
@@ -215,6 +250,7 @@ async function download(record: Recording): Promise<void> {
     'Download requested. Check Chrome’s Downloads list to confirm it finished. Your local library copy is retained.'
   );
 }
+
 function renderLibrary(): void {
   const query = input('search').value.toLocaleLowerCase();
   const sort = select('sort').value;
@@ -234,6 +270,7 @@ function renderLibrary(): void {
   const container = element('recording-list');
   container.replaceChildren();
   element('count').textContent = String(recordings.length);
+
   if (!items.length) {
     const empty = document.createElement('div');
     empty.className = 'empty';
@@ -245,8 +282,10 @@ function renderLibrary(): void {
       : 'Record your first video in the Studio.';
     empty.append(heading, description);
     container.append(empty);
+
     return;
   }
+
   for (const record of items) {
     const article = document.createElement('article');
     article.className = 'recording-item';
@@ -263,6 +302,7 @@ function renderLibrary(): void {
       record.durationMs
     )} · ${(record.bytes / 1024 / 1024).toFixed(1)} MB · ${record.width} × ${record.height}`;
     copy.append(title, metadata);
+
     if (record.state !== 'complete') {
       const warning = document.createElement('p');
       warning.className = 'interrupted';
@@ -272,18 +312,23 @@ function renderLibrary(): void {
           : 'Interrupted — partial video may not be playable';
       copy.append(warning);
     }
+
     const actions = document.createElement('div');
     actions.className = 'recording-actions';
+
     if (record.state !== 'recording') {
       if (record.bytes)
         actions.append(
           makeButton('Play', () => openPlayer(record)),
           makeButton('Download', () => download(record))
         );
+
       actions.append(
         makeButton('Rename', async () => {
           const title = prompt('Recording title (1–120 characters)', record.title);
+
           if (title === null) return;
+
           await library.update(record.id, { title });
           await refreshLibrary();
         }),
@@ -296,6 +341,7 @@ function renderLibrary(): void {
               )
             )
               return;
+
             await library.delete(record.id);
             await refreshLibrary();
           },
@@ -303,15 +349,19 @@ function renderLibrary(): void {
         )
       );
     }
+
     article.append(thumbnail, copy, actions);
     container.append(article);
   }
 }
+
 async function refreshLibrary(): Promise<void> {
   if (!library) return;
+
   recordings = await library.list();
   renderLibrary();
 }
+
 async function storageInfo(): Promise<void> {
   const estimate = await navigator.storage.estimate();
   const free =
@@ -322,6 +372,7 @@ async function storageInfo(): Promise<void> {
     free === undefined
       ? 'Local browser storage'
       : `${(free / 1024 / 1024 / 1024).toFixed(1)} GB browser quota remaining`;
+
   if (
     free !== undefined &&
     free < 128 * 1024 * 1024 &&
@@ -332,9 +383,12 @@ async function storageInfo(): Promise<void> {
     await engine.stop();
   }
 }
+
 function updateBubble(): void {
   const bubble = engine?.capture?.bubble;
+
   if (!bubble) return;
+
   bubble.size = Number(input('bubble-size').value);
   bubble.circle = select('bubble-shape').value === 'circle';
   bubble.mirror = input('mirror').checked;
@@ -355,9 +409,12 @@ function updateBubble(): void {
   handle.style.left = `${(area.clientWidth - w) / 2 + bubble.x * (w - size) + size / 2 - 18}px`;
   handle.style.top = `${(area.clientHeight - h) / 2 + bubble.y * (h - size) + size / 2 - 18}px`;
 }
+
 function moveBubble(event: PointerEvent): void {
   const bubble = engine?.capture?.bubble;
+
   if (!bubble) return;
+
   const area = element('preview-area').getBoundingClientRect();
   const settings =
     preview.srcObject instanceof MediaStream
@@ -395,6 +452,7 @@ button('library-nav').onclick = () => {
 };
 button('record').onclick = () => {
   if (!ownsSession) return;
+
   notice('');
   void saveOptions().catch(failure);
   // No await before engine.start calls getDisplayMedia: preserve the click's user activation.
@@ -406,19 +464,26 @@ element('settings').addEventListener('change', () => {
 input('background-file').addEventListener('change', () => {
   void action(async () => {
     const file = input('background-file').files?.[0];
+
     if (!file) return;
+
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5_000_000)
       throw new Error('Choose a PNG, JPEG or WebP image smaller than 5 MB.');
+
     const bitmap = await createImageBitmap(file);
+
     try {
       if (bitmap.width * bitmap.height > 16_777_216)
         throw new Error('Use a background image with at most 16 megapixels.');
+
       const canvas = document.createElement('canvas');
       const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
       canvas.width = Math.max(1, Math.round(bitmap.width * scale));
       canvas.height = Math.max(1, Math.round(bitmap.height * scale));
       const ctx = canvas.getContext('2d');
+
       if (!ctx) throw new Error('Image processing is unavailable.');
+
       ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
       const candidate = canvas.toDataURL('image/jpeg', 0.85);
       readOptions({ ...options(), backgroundImage: candidate });
@@ -438,10 +503,13 @@ chrome.runtime.onMessage.addListener((value, sender, respond) => {
     !validEnvelope(value)
   )
     return;
+
   if (value.type === 'owner-ready') {
     respond({ ready: initialized && ownsSession && engine?.phase === 'idle' });
+
     return;
   }
+
   if (value.type === 'owner-state') {
     respond({
       phase: engine?.phase ?? 'idle',
@@ -451,26 +519,35 @@ chrome.runtime.onMessage.addListener((value, sender, respond) => {
       stage: engine?.preparationStage ?? '',
       frame: value.frame === true ? engine?.capture?.cameraSnapshot() : undefined,
     });
+
     return;
   }
+
   if (value.type === 'owner-error' && typeof value.error === 'string') {
     failure(new Error(value.error.slice(0, 1000)));
+
     return;
   }
+
   if (value.type === 'owner-cancel') {
     engine?.cancelPreparation();
     respond({ ok: true });
+
     return;
   }
+
   if (value.type === 'owner-control' && isControl(value.action)) {
     void (async () => {
       if (value.action === 'stop') await engine.stop();
       else if (value.action === 'pause') engine.pause();
       else engine.resume();
+
       respond({ ok: true });
     })().catch((error) => respond({ ok: false, error: message(error) }));
+
     return true;
   }
+
   if (
     value.type === 'owner-start' &&
     initialized &&
@@ -480,6 +557,7 @@ chrome.runtime.onMessage.addListener((value, sender, respond) => {
     value.source !== null
   ) {
     const source = value.source as { streamId?: unknown; audio?: unknown };
+
     if (
       typeof source.streamId !== 'string' ||
       !source.streamId ||
@@ -487,6 +565,7 @@ chrome.runtime.onMessage.addListener((value, sender, respond) => {
       typeof source.audio !== 'boolean'
     )
       return;
+
     const streamId = source.streamId;
     const audio = source.audio;
     void (async () => {
@@ -499,6 +578,7 @@ chrome.runtime.onMessage.addListener((value, sender, respond) => {
         settings,
         () => {
           const mandatory = { chromeMediaSource: 'desktop', chromeMediaSourceId: streamId };
+
           return navigator.mediaDevices.getUserMedia({
             video: { mandatory },
             audio: audio ? { mandatory } : false,
@@ -506,6 +586,7 @@ chrome.runtime.onMessage.addListener((value, sender, respond) => {
         },
         async () => {
           const response = await chrome.runtime.sendMessage({ version: 1, type: 'owner-prepared' });
+
           if (
             typeof response !== 'object' ||
             response === null ||
@@ -520,13 +601,16 @@ chrome.runtime.onMessage.addListener((value, sender, respond) => {
       failure(error);
       respond({ ok: false, error: message(error) });
     });
+
     return true;
   }
+
   if (value.type === 'owner-start')
     respond({ ok: false, error: 'A recording is already active or the main app is not ready.' });
 });
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local' || !changes.options || !initialized || engine?.phase !== 'idle') return;
+
   try {
     applyOptions(readOptions(changes.options.newValue));
   } catch (error) {
@@ -541,6 +625,7 @@ document.addEventListener('visibilitychange', () => {
     operation
   )
     return;
+
   void devices()
     .then(async () => {
       if (engine.phase === 'idle' && !operation)
@@ -567,8 +652,10 @@ button('refresh-library').onclick = () => {
 };
 input('search').oninput = renderLibrary;
 select('sort').onchange = renderLibrary;
+
 for (const id of ['bubble-size', 'bubble-shape', 'mirror', 'camera-visible'])
   element(id).addEventListener('input', updateBubble);
+
 const handle = element('bubble-handle');
 handle.onpointerdown = (event) => {
   handle.setPointerCapture(event.pointerId);
@@ -579,7 +666,9 @@ handle.onpointermove = (event) => {
 };
 handle.onkeydown = (event) => {
   const bubble = engine?.capture?.bubble;
+
   if (!bubble || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+
   event.preventDefault();
   const step = event.shiftKey ? 0.1 : 0.02;
   bubble.x = Math.max(
@@ -598,10 +687,13 @@ handle.onkeydown = (event) => {
 window.addEventListener('resize', updateBubble);
 button('pip').onclick = () => {
   const video = engine?.capture?.cameraVideo;
+
   if (!video) return;
+
   void action(async () => {
     if (!document.pictureInPictureEnabled)
       throw new Error('Floating webcam is not supported by this Chrome configuration.');
+
     if (document.pictureInPictureElement) await document.exitPictureInPicture();
     else {
       await waitFor(video.play(), 5000, 'The floating camera preview could not start.');
@@ -614,24 +706,29 @@ dialog.addEventListener('close', () => {
   player.pause();
   player.removeAttribute('src');
   player.load();
+
   if (playerUrl) URL.revokeObjectURL(playerUrl);
+
   playerUrl = undefined;
 });
 button('theme').onclick = () => {
   const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
   document.documentElement.dataset.theme = theme;
+
   try {
     localStorage.setItem('chripify-extension-theme', theme);
   } catch {
     /* In-memory appearance still works. */
   }
 };
+
 try {
   document.documentElement.dataset.theme =
     localStorage.getItem('chripify-extension-theme') === 'light' ? 'light' : 'dark';
 } catch {
   /* Use default theme. */
 }
+
 window.addEventListener('beforeunload', (event) => {
   if (engine && engine.phase !== 'idle') {
     event.preventDefault();
@@ -644,10 +741,12 @@ window.addEventListener('pagehide', () => {
 });
 window.addEventListener('keydown', (event) => {
   if (!event.altKey || !event.shiftKey) return;
+
   if (event.code === 'KeyS') {
     event.preventDefault();
     void engine?.stop().catch(failure);
   }
+
   if (event.code === 'KeyP') {
     event.preventDefault();
     button('pause').click();
@@ -661,12 +760,14 @@ async function initialize(): Promise<void> {
     typeof MediaRecorder === 'undefined'
   )
     throw new Error('Install this extension in current desktop Chrome to use screen recording.');
+
   library = await Library.open();
   engine = new RecorderEngine(library, {
     changed: state,
     preview: (stream) => {
       preview.srcObject = stream ?? null;
       element('placeholder').hidden = Boolean(stream);
+
       if (stream) {
         void preview.play().catch(failure);
         updateBubble();
@@ -687,8 +788,10 @@ async function initialize(): Promise<void> {
         notice(
           'Another Chripify recorder tab is open. Use that tab, or close it and reload this one.'
         );
+
         return;
       }
+
       await library.recover();
       await refreshLibrary();
       ownsSession = true;
@@ -711,6 +814,7 @@ async function initialize(): Promise<void> {
   void storageInfo().catch(failure);
   setInterval(() => {
     element('elapsed').textContent = clock(engine.elapsed);
+
     if (engine.phase === 'preparing')
       element('state').textContent = engine.preparationStage || 'Preparing…';
   }, 500);
@@ -718,4 +822,5 @@ async function initialize(): Promise<void> {
     void storageInfo().catch(failure);
   }, 10_000);
 }
+
 void initialize().catch(failure);

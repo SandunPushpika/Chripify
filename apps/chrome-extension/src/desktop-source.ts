@@ -19,33 +19,44 @@ export function chooseDesktopSource(
       new Error('The recording tab is unavailable. Open the main app and retry.')
     );
   }
+
   return new Promise((resolve, reject) => {
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let requestId: number | undefined;
+
     const finish = (error?: unknown, source?: DesktopSource) => {
       if (settled) return;
+
       settled = true;
       clearTimeout(timer);
       signal?.removeEventListener('abort', cancelled);
+
       if (error) reject(error);
       else if (source) resolve(source);
     };
+
     const cancelled = () => {
       finish(signal?.reason ?? new DOMException('Sharing cancelled.', 'AbortError'));
+
       if (requestId !== undefined) chrome.desktopCapture.cancelChooseDesktopMedia(requestId);
     };
+
     if (signal?.aborted) {
       cancelled();
+
       return;
     }
+
     signal?.addEventListener('abort', cancelled, { once: true });
+
     try {
       requestId = chrome.desktopCapture.chooseDesktopMedia(
         audio ? ['screen', 'window', 'tab', 'audio'] : ['screen', 'window', 'tab'],
         target,
         (streamId, options) => {
           const error = chrome.runtime.lastError;
+
           if (error)
             finish(new Error(error.message || 'Chrome could not open the sharing picker.'));
           else if (!streamId) finish(new DOMException('Sharing cancelled.', 'NotAllowedError'));
@@ -53,9 +64,11 @@ export function chooseDesktopSource(
             finish(undefined, { streamId, audio: audio && options?.canRequestAudioTrack === true });
         }
       );
+
       if (!settled)
         timer = setTimeout(() => {
           finish(new Error('Sharing selection timed out.'));
+
           if (requestId !== undefined) chrome.desktopCapture.cancelChooseDesktopMedia(requestId);
         }, timeoutMs);
     } catch (error) {
@@ -70,5 +83,6 @@ export async function enumerateVisibleDevices(
   visibility: DocumentVisibilityState
 ): Promise<MediaDeviceInfo[] | undefined> {
   if (visibility !== 'visible') return undefined;
+
   return devices.enumerateDevices();
 }

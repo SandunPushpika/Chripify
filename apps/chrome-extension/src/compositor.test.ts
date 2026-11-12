@@ -7,23 +7,29 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
+
 function fixture(ready = true, failConstruction = false) {
   const generated: Generator[] = [];
   const workers: FakeWorker[] = [];
   const processors: Array<{ maxBufferSize: number }> = [];
+
   class Generator {
     writable = new WritableStream<VideoFrame>();
     stop = vi.fn();
+
     constructor() {
       generated.push(this);
     }
   }
+
   class Processor {
     readable = new ReadableStream<VideoFrame>();
+
     constructor(options: { track: MediaStreamTrack; maxBufferSize: number }) {
       processors.push(options);
     }
   }
+
   class FakeWorker {
     onmessage: ((event: MessageEvent<CompositorEvent>) => void) | null = null;
     onerror: ((event: ErrorEvent) => void) | null = null;
@@ -37,11 +43,14 @@ function fixture(ready = true, failConstruction = false) {
           } as MessageEvent<CompositorEvent>)
         );
     });
+
     constructor() {
       if (failConstruction) throw new Error('Worker unavailable');
+
       workers.push(this);
     }
   }
+
   vi.stubGlobal('document', undefined);
   vi.stubGlobal('MediaStreamTrackGenerator', Generator);
   vi.stubGlobal('MediaStreamTrackProcessor', Processor);
@@ -49,8 +58,10 @@ function fixture(ready = true, failConstruction = false) {
   vi.stubGlobal('OffscreenCanvas', class {});
   vi.stubGlobal('VideoFrame', class {});
   const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
+
   return { generated, workers, processors, track };
 }
+
 describe('worker compositor browser adapter', () => {
   it('transfers bounded native streams and becomes ready without an HTML preview', async () => {
     const f = fixture();
@@ -66,12 +77,14 @@ describe('worker compositor browser adapter', () => {
     compositor.dispose();
     compositor.dispose();
     expect(f.workers[0]?.terminate).toHaveBeenCalledOnce();
+
     for (const track of f.generated) expect(track.stop).toHaveBeenCalledOnce();
   });
   it('cleans generated tracks if a worker cannot be constructed', () => {
     const f = fixture(false, true);
     expect(() => new WorkerCompositor(vi.fn())).toThrow('Worker unavailable');
     expect(f.generated).toHaveLength(2);
+
     for (const track of f.generated) expect(track.stop).toHaveBeenCalledOnce();
   });
   it('times out and terminates a worker that never produces a frame', async () => {
@@ -83,6 +96,7 @@ describe('worker compositor browser adapter', () => {
     await vi.advanceTimersByTimeAsync(10_000);
     await rejected;
     expect(f.workers[0]?.terminate).toHaveBeenCalledOnce();
+
     for (const track of f.generated) expect(track.stop).toHaveBeenCalledOnce();
   });
   it('fails explicitly when background frame APIs are unavailable', () => {

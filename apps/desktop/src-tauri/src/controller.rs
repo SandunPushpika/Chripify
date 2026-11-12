@@ -19,6 +19,7 @@ impl Controller {
         tauri::async_runtime::spawn(run(receiver, storage, helper));
         Self { sender }
     }
+
     pub async fn call<T>(&self, request: impl FnOnce(Reply<T>) -> Request) -> Result<T, AppError> {
         let (tx, rx) = oneshot::channel();
         self.sender.try_send(request(tx)).map_err(|_| AppError::new("busy", "Recorder is busy. Try again shortly."))?;

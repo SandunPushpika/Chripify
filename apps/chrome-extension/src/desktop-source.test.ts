@@ -5,7 +5,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
+
 type Callback = (id: string, options: { canRequestAudioTrack: boolean }) => void;
+
 function fixture() {
   const choose =
     vi.fn<
@@ -21,8 +23,10 @@ function fixture() {
     desktopCapture: { chooseDesktopMedia: choose, cancelChooseDesktopMedia: cancel },
   });
   const target = { id: 17, url: runtime.getURL('recorder.html'), active: false, windowId: 4 };
+
   return { choose, cancel, runtime, target };
 }
+
 describe('toolbar desktop picker regression', () => {
   it('cancels the browser picker when preparation is cancelled', async () => {
     const f = fixture();
@@ -37,6 +41,7 @@ describe('toolbar desktop picker regression', () => {
     const f = fixture();
     f.choose.mockImplementation((_sources, _target, callback) => {
       queueMicrotask(() => callback('opaque-source', { canRequestAudioTrack: true }));
+
       return 8;
     });
     await expect(chooseDesktopSource(f.target, true)).resolves.toEqual({
@@ -52,6 +57,7 @@ describe('toolbar desktop picker regression', () => {
   });
   it('rejects a website or missing target before asking Chrome for capture', async () => {
     const f = fixture();
+
     for (const target of [
       {},
       { id: -1, url: f.target.url },
@@ -59,12 +65,14 @@ describe('toolbar desktop picker regression', () => {
     ]) {
       await expect(chooseDesktopSource(target, true)).rejects.toThrow('recording tab');
     }
+
     expect(f.choose).not.toHaveBeenCalled();
   });
   it('preserves picker cancellation without starting a stream', async () => {
     const f = fixture();
     f.choose.mockImplementation((_sources, _target, callback) => {
       queueMicrotask(() => callback('', { canRequestAudioTrack: false }));
+
       return 8;
     });
     await expect(chooseDesktopSource(f.target, true)).rejects.toHaveProperty(
@@ -80,6 +88,7 @@ describe('toolbar desktop picker regression', () => {
         callback('', { canRequestAudioTrack: false });
         f.runtime.lastError = undefined;
       });
+
       return 8;
     });
     await expect(chooseDesktopSource(f.target, true)).rejects.toThrow('Native picker failed');
@@ -93,6 +102,7 @@ describe('toolbar desktop picker regression', () => {
     await expect(chooseDesktopSource(f.target, true)).rejects.toThrow('API unavailable');
     f.choose.mockImplementation((_sources, _target, callback) => {
       callback('source', { canRequestAudioTrack: true });
+
       return 8;
     });
     await expect(chooseDesktopSource(f.target, false)).resolves.toEqual({
@@ -105,9 +115,12 @@ describe('toolbar desktop picker regression', () => {
   it('cancels a timed-out chooser once and ignores late callbacks', async () => {
     vi.useFakeTimers();
     const f = fixture();
+
     let respond: Callback = () => undefined;
+
     f.choose.mockImplementation((_sources, _target, callback) => {
       respond = callback;
+
       return 8;
     });
     const chosen = chooseDesktopSource(f.target, true, 100);

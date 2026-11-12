@@ -3,6 +3,7 @@ import { canStart, elapsed, isDesktop } from './contracts';
 import { useRecorder } from './useRecorder';
 
 type Page = 'recorder' | 'library' | 'settings';
+
 function Glyph({ type }: { type: 'record' | 'library' | 'settings' | 'shield' | 'screen' }) {
   return (
     <svg
@@ -48,6 +49,7 @@ function Glyph({ type }: { type: 'record' | 'library' | 'settings' | 'shield' | 
     </svg>
   );
 }
+
 export function App() {
   const recorder = useRecorder();
   const [page, setPage] = useState<Page>('recorder');
@@ -64,6 +66,7 @@ export function App() {
   });
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+
     try {
       localStorage.setItem('chripify-theme', theme);
     } catch {
@@ -72,7 +75,9 @@ export function App() {
   }, [theme]);
   useEffect(() => {
     if (recorder.status.phase !== 'recording') return;
+
     const timer = setInterval(() => setNow(Date.now()), 1000);
+
     return () => clearInterval(timer);
   }, [recorder.status.phase]);
   const selected = recorder.sources.find((s) => s.id === sourceId) ?? recorder.sources[0];
@@ -83,6 +88,7 @@ export function App() {
       .toLowerCase()
       .includes(query.toLowerCase())
   );
+
   return (
     <div className="shell">
       <aside className="sidebar">

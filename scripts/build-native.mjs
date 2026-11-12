@@ -1,10 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+
 if (process.platform !== 'darwin') {
   console.log('Native capture helper is implemented only on macOS.');
   process.exit(0);
 }
+
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'apps/desktop/src-tauri/binaries');
 mkdirSync(output, { recursive: true });

@@ -30,6 +30,7 @@ fn private_directory(path: &Path) -> Result<(), AppError> {
         },
         Err(_) => return Err(AppError::storage()),
     }
+
     #[cfg(unix)] {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(|_| AppError::storage())?;
@@ -47,6 +48,7 @@ impl Storage {
           PRAGMA user_version=1;").map_err(|_| AppError::storage())?;
         Ok(storage)
     }
+
     fn open(&self) -> Result<Connection, AppError> {
         let path = self.root.join("library.sqlite3");
         if fs::symlink_metadata(&path).is_ok_and(|m| m.file_type().is_symlink()) {
@@ -54,6 +56,7 @@ impl Storage {
         }
         Connection::open(path).map_err(|_| AppError::storage())
     }
+
     pub fn allocate(&self, id: &str) -> Result<PathBuf, AppError> {
         // Validate even internally generated identifiers before constructing paths.
         let parsed = uuid::Uuid::parse_str(id).map_err(|_| AppError::storage())?;
@@ -68,9 +71,11 @@ impl Storage {
         builder.create(&folder).map_err(|_| AppError::storage())?;
         Ok(folder.join("recording.mp4"))
     }
+
     pub fn free_bytes(&self) -> Result<u64, AppError> {
         fs2::available_space(&self.root).map_err(|_| AppError::storage())
     }
+
     pub fn complete(&self, id: &str, created_at: u64, path: &Path) -> Result<(), AppError> {
         let meta = fs::symlink_metadata(path).map_err(|_| AppError::storage())?;
         if !meta.is_file() || meta.len() == 0 { return Err(AppError::storage()); }
@@ -83,6 +88,7 @@ impl Storage {
           ON CONFLICT(id) DO NOTHING", params![id, created_at, meta.len()]).map_err(|_| AppError::storage())?;
         Ok(())
     }
+
     pub fn list(&self) -> Result<Vec<Recording>, AppError> {
         let db = self.open()?;
         let mut stmt = db.prepare("SELECT id, created_at, bytes FROM recordings ORDER BY created_at DESC LIMIT 200")
@@ -109,9 +115,11 @@ mod tests {
     impl TestFolder {
         fn new() -> Self { Self(std::env::temp_dir().join(format!("chripify-test-{}", uuid::Uuid::new_v4()))) }
     }
+
     impl Drop for TestFolder {
         fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); }
     }
+
     #[test]
     fn rejects_traversal_and_preexisting_sessions() {
         let folder = TestFolder::new();
@@ -121,6 +129,7 @@ mod tests {
         assert!(storage.allocate(&id).is_ok());
         assert!(storage.allocate(&id).is_err());
     }
+
     #[test]
     fn completes_idempotently_and_detects_missing_media() {
         let folder = TestFolder::new();
@@ -137,6 +146,7 @@ mod tests {
         fs::remove_file(path).unwrap();
         assert!(storage.list().unwrap()[0].missing);
     }
+
     #[cfg(unix)]
     #[test]
     fn rejects_symlinked_root_and_protects_directory() {

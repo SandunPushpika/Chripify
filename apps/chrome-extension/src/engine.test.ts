@@ -55,7 +55,9 @@ describe('local recording clock and chunk backpressure', () => {
   });
   it('releases a stream that resolves after the permission timeout', async () => {
     vi.useFakeTimers();
+
     let complete: (stream: MediaStream) => void = () => undefined;
+
     const stop = vi.fn();
     const pending = acquire(
       new Promise((resolve) => {
@@ -78,38 +80,49 @@ class FakeTrack extends EventTarget {
   stop = vi.fn(() => {
     this.readyState = 'ended';
   });
+
   getSettings() {
     return { width: 1280, height: 720 };
   }
+
   applyConstraints = vi.fn().mockResolvedValue(undefined);
 }
+
 class FakeStream {
   constructor(readonly tracks: FakeTrack[]) {}
+
   getTracks() {
     return this.tracks;
   }
+
   getVideoTracks() {
     return this.tracks.filter((t) => t.kind === 'video');
   }
+
   getAudioTracks() {
     return this.tracks.filter((t) => t.kind === 'audio');
   }
 }
+
 class FakeRecorder {
   static isTypeSupported = () => true;
   state = 'inactive';
   ondataavailable: ((event: { data: Blob }) => void) | null = null;
   onstop: ((event: Event) => void) | null = null;
   onerror: (() => void) | null = null;
+
   start() {
     this.state = 'recording';
   }
+
   pause() {
     this.state = 'paused';
   }
+
   resume() {
     this.state = 'recording';
   }
+
   stop() {
     this.state = 'inactive';
     queueMicrotask(() => {
@@ -118,6 +131,7 @@ class FakeRecorder {
     });
   }
 }
+
 function fixture(quota = 1024 ** 3) {
   const track = new FakeTrack();
   const stream = new FakeStream([track]);
@@ -136,6 +150,7 @@ function fixture(quota = 1024 ** 3) {
     }),
     append: vi.fn(async (id: string, _index: number, blob: Blob) => {
       const row = rows.find((r) => r.id === id);
+
       if (row) {
         row.bytes += blob.size;
         row.chunkCount++;
@@ -144,6 +159,7 @@ function fixture(quota = 1024 ** 3) {
     list: vi.fn(async () => rows),
     update: vi.fn(async (id: string, changes: Partial<Recording>) => {
       const row = rows.find((r) => r.id === id);
+
       if (row) Object.assign(row, changes);
     }),
   };
@@ -166,8 +182,10 @@ function fixture(quota = 1024 ** 3) {
     microphoneGain: 1,
     sharedGain: 1,
   };
+
   return { engine, options, track, store, events, rows, getDisplayMedia, getUserMedia };
 }
+
 describe('recording workflow using simulated Chrome media devices', () => {
   it('counts down after browser restoration and only then starts recording', async () => {
     vi.useFakeTimers();
@@ -177,6 +195,7 @@ describe('recording workflow using simulated Chrome media devices', () => {
     const starting = f.engine.start(f.options, undefined, restored);
     await vi.advanceTimersByTimeAsync(0);
     expect(restored).toHaveBeenCalledOnce();
+
     for (const remaining of [3, 2, 1]) {
       expect(f.engine.preparationStage).toBe(`Recording starts in ${remaining}…`);
       expect(f.engine.phase).toBe('preparing');
@@ -184,6 +203,7 @@ describe('recording workflow using simulated Chrome media devices', () => {
       expect(encode).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(1000);
     }
+
     await starting;
     expect(encode).toHaveBeenCalledOnce();
     expect(f.engine.phase).toBe('recording');
@@ -233,7 +253,9 @@ describe('recording workflow using simulated Chrome media devices', () => {
   });
   it('cancels pending camera permission and stops a camera stream arriving afterward', async () => {
     const f = fixture();
+
     let deliver: (stream: FakeStream) => void = () => undefined;
+
     f.getUserMedia.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -277,10 +299,12 @@ describe('recording workflow using simulated Chrome media devices', () => {
   it('bounds blocked audio startup and releases both requested devices', async () => {
     vi.useFakeTimers();
     const close = vi.fn().mockResolvedValue(undefined);
+
     class BlockedAudio {
       resume = () => new Promise<void>(() => undefined);
       close = close;
     }
+
     vi.stubGlobal('AudioContext', BlockedAudio);
     const f = fixture();
     const microphone = new FakeTrack();
