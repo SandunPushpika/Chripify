@@ -77,6 +77,7 @@ for (const control of [mic, audio, camera, effect])
       failure(error);
     }
   });
+
 start.onclick = () => {
   if (busy || current !== 'idle') return;
   busy = true;
