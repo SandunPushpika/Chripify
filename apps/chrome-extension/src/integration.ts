@@ -1,6 +1,7 @@
 import { validateOptions, type Options, type Phase } from './domain.js';
 
 export const overlayOrigins = ['http://*/*', 'https://*/*'];
+
 export interface LiveState {
   phase: Phase;
   elapsed: number;
@@ -9,10 +10,13 @@ export interface LiveState {
   warning?: string;
   stage?: string;
 }
+
 export type Control = 'pause' | 'resume' | 'stop';
+
 export function isControl(value: unknown): value is Control {
   return value === 'pause' || value === 'resume' || value === 'stop';
 }
+
 export function canReadOverlay(
   tab: { active: boolean; url?: string },
   senderUrl: string,
@@ -33,6 +37,7 @@ export function canReadOverlay(
     return false;
   }
 }
+
 export function validEnvelope(
   value: unknown
 ): value is Record<string, unknown> & { version: 1; type: string } {
@@ -47,6 +52,7 @@ export function validEnvelope(
     Object.keys(value).length <= 5
   );
 }
+
 export function defaultOptions(): Options {
   return {
     microphone: true,
@@ -64,6 +70,7 @@ export function defaultOptions(): Options {
     keyTolerance: 90,
   };
 }
+
 export function readOptions(value: unknown): Options {
   const defaults = defaultOptions();
   if (typeof value !== 'object' || value === null) return defaults;
@@ -86,6 +93,7 @@ export function readOptions(value: unknown): Options {
   validateOptions(options);
   return options;
 }
+
 export function isLiveState(value: unknown): value is LiveState {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Partial<LiveState>;
